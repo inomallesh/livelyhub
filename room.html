@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>livelyhub — room</title>
+  <link rel="stylesheet" href="css/styles.css" />
+</head>
+<body>
+  <div class="bg-orbs">
+    <div class="orb orb--1"></div>
+    <div class="orb orb--2"></div>
+    <div class="orb orb--3"></div>
+  </div>
+
+  <div id="notFoundView" class="center-msg" style="display:none;">
+    <h2>Room not found</h2>
+    <p>This room doesn't exist, or its 6 hours are already up.</p>
+    <a href="index.html" class="btn btn-secondary" style="margin-top:12px; text-decoration:none; display:inline-block;">Back home</a>
+  </div>
+
+  <div id="loadingView" class="center-msg">
+    <span class="spinner"></span>
+    <p>Joining room...</p>
+  </div>
+
+  <main id="roomView" class="room-wrap" style="display:none;">
+    <header class="room-header glass">
+      <div class="room-title">
+        <h2 id="roomCodeLabel">Room</h2>
+        <span id="youBadge" class="you-badge">
+          <span class="you-dot" id="youDot"></span>
+          <span id="youName">You</span>
+        </span>
+      </div>
+      <div class="expiry-block">
+        <span id="expiryLabel">...</span>
+        <button id="extendBtn" class="btn extend-btn">+2 hours</button>
+      </div>
+    </header>
+
+    <div class="room-grid">
+      <section id="editorPanel" class="editor-panel glass state-green">
+        <div id="editorInner" class="editor-inner claimable">
+          <span id="claimHint" class="claim-hint">Open — click to claim</span>
+          <textarea id="lhTextarea" class="lh-textarea" readonly placeholder="Click here to start writing..."></textarea>
+        </div>
+        <div class="status-row">
+          <span id="statusLabel" class="status-label">
+            <span class="status-dot" id="statusDot"></span>
+            <span id="statusText">Open — click to claim</span>
+          </span>
+          <button id="doneBtn" class="btn done-btn">Done writing</button>
+        </div>
+      </section>
+
+      <section class="chat-panel glass">
+        <div id="chatScroll" class="chat-scroll"></div>
+        <div class="chat-input-row">
+          <input id="chatInput" class="chat-input" placeholder="Message the room..." />
+          <button id="sendBtn" class="send-btn">
+            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M4 12L20 4L13 20L11 13L4 12Z" fill="white"/>
+            </svg>
+          </button>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <script type="module" src="js/room.js"></script>
+</body>
+</html>

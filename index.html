@@ -1,1 +1,43 @@
-fdvdsfg
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>livelyhub</title>
+  <link rel="stylesheet" href="css/styles.css" />
+</head>
+<body>
+  <div class="bg-orbs">
+    <div class="orb orb--1"></div>
+    <div class="orb orb--2"></div>
+    <div class="orb orb--3"></div>
+  </div>
+
+  <main class="home-wrap">
+    <div class="home-card glass">
+      <div class="brand-mark">
+        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M4 6h16M4 12h10M4 18h13" stroke="white" stroke-width="2.2" stroke-linecap="round"/>
+        </svg>
+      </div>
+      <h1>livelyhub</h1>
+      <p class="home-tag">One shared room. One pen at a time.<br />Everyone else watches, chats, and waits their turn.</p>
+
+      <button id="createBtn" class="btn btn-primary">
+        <span id="createBtnLabel">Create a room</span>
+      </button>
+
+      <div class="divider">or join with a code</div>
+
+      <div class="join-row">
+        <input id="joinInput" class="input-glass" maxlength="6" inputmode="numeric" placeholder="123456" />
+        <button id="joinBtn" class="btn btn-secondary">Join</button>
+      </div>
+
+      <p id="errorMsg" class="error-msg" style="display:none;"></p>
+    </div>
+  </main>
+
+  <script type="module" src="js/home.js"></script>
+</body>
+</html>
