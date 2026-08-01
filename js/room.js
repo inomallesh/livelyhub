@@ -2,10 +2,13 @@ import {
   getRoom,
   joinRoom,
   extendRoom,
+  renamePresence,
   watchRoom,
   watchMessages,
   watchExpiry,
   getUserId,
+  getSavedIdentity,
+  saveIdentity,
 } from "./roomUtils.js";
 import { initEditor, onRoomUpdate } from "./editor.js";
 import { initChat, renderMessages } from "./chat.js";
@@ -20,6 +23,8 @@ const roomView = document.getElementById("roomView");
 const roomCodeLabel = document.getElementById("roomCodeLabel");
 const youDot = document.getElementById("youDot");
 const youName = document.getElementById("youName");
+const youNameInput = document.getElementById("youNameInput");
+const renameIcon = document.getElementById("renameIcon");
 const expiryLabel = document.getElementById("expiryLabel");
 const extendBtn = document.getElementById("extendBtn");
 
@@ -30,6 +35,41 @@ function formatCountdown(ms) {
   const h = Math.floor(totalSec / 3600);
   const m = Math.floor((totalSec % 3600) / 60);
   return `${h}h ${m}m left`;
+}
+
+function initRename(code, me) {
+  const startEdit = () => {
+    youNameInput.value = me.name;
+    youName.style.display = "none";
+    renameIcon.style.display = "none";
+    youNameInput.style.display = "inline-block";
+    youNameInput.focus();
+    youNameInput.select();
+  };
+
+  const commit = async () => {
+    const newName = youNameInput.value.trim().slice(0, 24);
+    youNameInput.style.display = "none";
+    youName.style.display = "inline";
+    renameIcon.style.display = "inline-block";
+    if (newName && newName !== me.name) {
+      me.name = newName;
+      youName.textContent = `You: ${newName}`;
+      saveIdentity({ name: newName });
+      await renamePresence(code, me.userId, newName);
+    }
+  };
+
+  youName.addEventListener("click", startEdit);
+  renameIcon.addEventListener("click", startEdit);
+  youNameInput.addEventListener("blur", commit);
+  youNameInput.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") youNameInput.blur();
+    if (e.key === "Escape") {
+      youNameInput.value = me.name;
+      youNameInput.blur();
+    }
+  });
 }
 
 async function main() {
@@ -47,8 +87,9 @@ async function main() {
   }
 
   const userId = getUserId();
-  const guessedName = `Guest-${userId.slice(2, 6)}`;
-  const presence = await joinRoom(code, userId, guessedName);
+  const saved = getSavedIdentity();
+  const chosenName = saved.name || `Guest-${userId.slice(2, 6)}`;
+  const presence = await joinRoom(code, userId, chosenName, saved.color);
   const me = { userId, name: presence.name, color: presence.color };
 
   // Reveal room UI
@@ -61,6 +102,7 @@ async function main() {
 
   initEditor(code, me);
   initChat(code, me);
+  initRename(code, me);
 
   watchRoom(code, (data) => onRoomUpdate(data, me));
   watchMessages(code, (list) => renderMessages(list, me));
