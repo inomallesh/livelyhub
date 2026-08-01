@@ -75,13 +75,16 @@ export async function extendRoom(code, additionalHours = 2) {
   await set(expiryRef, base + additionalHours * 60 * 60 * 1000);
 }
 
-export async function joinRoom(code, userId, displayName) {
+export async function joinRoom(code, userId, displayName, preferredColor) {
   const presenceRef = ref(db, `rooms/${code}/presence`);
   const snapshot = await get(presenceRef);
   const existing = snapshot.exists() ? snapshot.val() : {};
 
   const usedColors = new Set(Object.values(existing).map((u) => u.color));
+  // Honor the user's chosen color if it's free in this room; otherwise fall
+  // back to the next unused color in the palette.
   const availableColor =
+    (preferredColor && !usedColors.has(preferredColor) && preferredColor) ||
     COLOR_PALETTE.find((c) => !usedColors.has(c)) ||
     COLOR_PALETTE[Object.keys(existing).length % COLOR_PALETTE.length];
 
@@ -131,6 +134,21 @@ export async function updateContent(code, content) {
   await update(ref(db, `rooms/${code}`), { content });
 }
 
+export async function renamePresence(code, userId, newName) {
+  const nameRef = ref(db, `rooms/${code}/presence/${userId}/name`);
+  await set(nameRef, newName);
+
+  // If this user currently holds the write lock, keep the lock's stored
+  // name in sync too, so other users' "X is editing" label updates live.
+  const lockRef = ref(db, `rooms/${code}/activeEditor`);
+  await runTransaction(lockRef, (current) => {
+    if (current && current.userId === userId) {
+      return { ...current, name: newName };
+    }
+    return current;
+  });
+}
+
 export async function sendMessage(code, userId, name, color, text) {
   const messagesRef = ref(db, `rooms/${code}/messages`);
   const newMsgRef = push(messagesRef);
@@ -165,4 +183,18 @@ export function getUserId() {
     sessionStorage.setItem("lh_userId", id);
   }
   return id;
+}
+
+// Identity chosen on the home page (name + preferred color), persisted so it
+// carries over from index.html into room.html.
+export function saveIdentity({ name, color }) {
+  if (name !== undefined) localStorage.setItem("lh_name", name);
+  if (color !== undefined) localStorage.setItem("lh_color", color);
+}
+
+export function getSavedIdentity() {
+  return {
+    name: localStorage.getItem("lh_name") || "",
+    color: localStorage.getItem("lh_color") || COLOR_PALETTE[0],
+  };
 }
