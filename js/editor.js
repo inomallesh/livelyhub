@@ -21,13 +21,36 @@ let warnTimer = null;
 let releaseTimer = null;
 let activeEditor = null;
 
-export function initEditor(code, me) {
-  els.inner.addEventListener("click", () => handleClaimClick(code, me));
-  els.textarea.addEventListener("input", () => handleType(code, me));
-  els.doneBtn.addEventListener("click", () => releaseLock(code, me.userId));
+const TAB_SPACES = "   "; // 3 spaces
 
-  // Prevent typing from being intercepted by the outer click-to-claim handler
-  els.textarea.addEventListener("click", (e) => e.stopPropagation());
+export function initEditor(code, me) {
+  // Clicking anywhere in the editor area — including directly on the
+  // textarea itself — attempts to claim the lock. handleClaimClick no-ops
+  // unless the lock is actually open, so this is always safe.
+  els.inner.addEventListener("click", () => handleClaimClick(code, me));
+
+  els.textarea.addEventListener("input", () => handleType(code, me));
+  els.textarea.addEventListener("keydown", (e) => handleKeydown(e, code, me));
+  els.doneBtn.addEventListener("click", () => releaseLock(code, me.userId));
+}
+
+function handleKeydown(e, code, me) {
+  if (e.key !== "Tab") return;
+  e.preventDefault(); // stop focus from shifting to the next button/element
+
+  const iAmEditor = activeEditor?.userId === me.userId;
+  if (!iAmEditor) return; // read-only — nothing to insert
+
+  const ta = els.textarea;
+  const start = ta.selectionStart;
+  const end = ta.selectionEnd;
+  const value = ta.value;
+
+  ta.value = value.slice(0, start) + TAB_SPACES + value.slice(end);
+  const newPos = start + TAB_SPACES.length;
+  ta.selectionStart = ta.selectionEnd = newPos;
+
+  handleType(code, me);
 }
 
 export function onRoomUpdate(room, me) {
