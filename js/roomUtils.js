@@ -77,25 +77,35 @@ export async function extendRoom(code, additionalHours = 2) {
 
 export async function joinRoom(code, userId, displayName, preferredColor) {
   const presenceRef = ref(db, `rooms/${code}/presence`);
-  const snapshot = await get(presenceRef);
-  const existing = snapshot.exists() ? snapshot.val() : {};
+  const name = displayName || `Guest-${userId.slice(2, 6)}`;
 
-  const usedColors = new Set(Object.values(existing).map((u) => u.color));
-  // Honor the user's chosen color if it's free in this room; otherwise fall
-  // back to the next unused color in the palette.
-  const availableColor =
-    (preferredColor && !usedColors.has(preferredColor) && preferredColor) ||
-    COLOR_PALETTE.find((c) => !usedColors.has(c)) ||
-    COLOR_PALETTE[Object.keys(existing).length % COLOR_PALETTE.length];
+  // Use a transaction so two people joining at nearly the same moment can't
+  // both read "blue is free" and both write blue — Firebase re-runs this
+  // function against the latest data if another write landed in between.
+  const result = await runTransaction(presenceRef, (existing) => {
+    const current = existing || {};
+    const usedColors = new Set(
+      Object.entries(current)
+        .filter(([uid]) => uid !== userId) // don't let a stale entry for myself block my own color
+        .map(([, u]) => u.color)
+    );
+
+    const availableColor =
+      (preferredColor && !usedColors.has(preferredColor) && preferredColor) ||
+      COLOR_PALETTE.find((c) => !usedColors.has(c)) ||
+      COLOR_PALETTE[Object.keys(current).length % COLOR_PALETTE.length];
+
+    current[userId] = {
+      name,
+      color: availableColor,
+      joinedAt: Date.now(),
+    };
+    return current;
+  });
+
+  const presenceData = result.snapshot.val()[userId];
 
   const myPresenceRef = ref(db, `rooms/${code}/presence/${userId}`);
-  const presenceData = {
-    name: displayName || `Guest-${userId.slice(2, 6)}`,
-    color: availableColor,
-    joinedAt: Date.now(),
-  };
-
-  await set(myPresenceRef, presenceData);
   onDisconnect(myPresenceRef).remove();
 
   return presenceData;
@@ -198,3 +208,4 @@ export function getSavedIdentity() {
     color: localStorage.getItem("lh_color") || COLOR_PALETTE[0],
   };
 }
+
