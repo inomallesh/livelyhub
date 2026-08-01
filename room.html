@@ -30,7 +30,11 @@
         <h2 id="roomCodeLabel">Room</h2>
         <span id="youBadge" class="you-badge">
           <span class="you-dot" id="youDot"></span>
-          <span id="youName">You</span>
+          <span id="youName" class="you-name" title="Click to rename">You</span>
+          <input id="youNameInput" class="you-name-input" maxlength="24" style="display:none;" />
+          <svg class="rename-icon" id="renameIcon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M16.5 3.5l4 4L7 21l-4.5.5.5-4.5L16.5 3.5z" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
         </span>
       </div>
       <div class="expiry-block">
