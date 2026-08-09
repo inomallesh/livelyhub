@@ -6,6 +6,8 @@ import {
   LOCK_IDLE_TIMEOUT_MS,
   WARNING_WINDOW_MS,
 } from "./roomUtils.js";
+import { encryptText, decryptText } from "./crypto.js";
+import { notifyEditingStarted, clearEditingNotice } from "./notifications.js";
 
 const els = {
   panel: document.getElementById("editorPanel"),
@@ -15,11 +17,14 @@ const els = {
   statusDot: document.getElementById("statusDot"),
   statusText: document.getElementById("statusText"),
   doneBtn: document.getElementById("doneBtn"),
+  decryptError: document.getElementById("decryptError"),
 };
 
 let warnTimer = null;
 let releaseTimer = null;
 let activeEditor = null;
+let lastLockOwner = null; // tracks whose claim we last notified about
+let decryptFailed = false;
 
 const TAB_SPACES = "   "; // 3 spaces
 
@@ -53,17 +58,51 @@ function handleKeydown(e, code, me) {
   handleType(code, me);
 }
 
-export function onRoomUpdate(room, me) {
+export async function onRoomUpdate(room, code, me) {
   if (!room) return;
+
   // Only overwrite the textarea if the user isn't the one currently typing,
   // to avoid clobbering their cursor position mid-edit.
   const iAmEditor = room.activeEditor?.userId === me.userId;
-  if (!iAmEditor && els.textarea.value !== (room.content || "")) {
-    els.textarea.value = room.content || "";
+  if (!iAmEditor) {
+    try {
+      const plaintext = await decryptText(code, room.content || "");
+      if (els.textarea.value !== plaintext) {
+        els.textarea.value = plaintext;
+      }
+      hideDecryptError();
+    } catch {
+      showDecryptError();
+    }
+  }
+
+  // Notify (once per claim) when someone ELSE just took the pen.
+  const newOwner = room.activeEditor?.userId || null;
+  if (newOwner !== lastLockOwner) {
+    if (newOwner && newOwner !== me.userId) {
+      notifyEditingStarted(room.activeEditor.name || "Someone");
+    }
+    if (!newOwner || newOwner === me.userId) {
+      clearEditingNotice();
+    }
+    lastLockOwner = newOwner;
   }
 
   activeEditor = room.activeEditor || null;
   render(me);
+}
+
+function showDecryptError() {
+  decryptFailed = true;
+  els.decryptError.style.display = "flex";
+  els.textarea.style.display = "none";
+}
+
+function hideDecryptError() {
+  if (!decryptFailed) return;
+  decryptFailed = false;
+  els.decryptError.style.display = "none";
+  els.textarea.style.display = "block";
 }
 
 function render(me) {
@@ -149,6 +188,7 @@ async function handleClaimClick(code, me) {
 async function handleType(code, me) {
   const iAmEditor = activeEditor?.userId === me.userId;
   if (!iAmEditor) return;
-  await updateContent(code, els.textarea.value);
+  const ciphertext = await encryptText(code, els.textarea.value);
+  await updateContent(code, ciphertext);
   await refreshLock(code, me.userId);
 }
