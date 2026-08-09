@@ -12,6 +12,7 @@ import {
 } from "./roomUtils.js";
 import { initEditor, onRoomUpdate } from "./editor.js";
 import { initChat, renderMessages } from "./chat.js";
+import { ensureNotificationPermission } from "./notifications.js";
 
 const params = new URLSearchParams(window.location.search);
 const code = params.get("code");
@@ -104,8 +105,12 @@ async function main() {
   initChat(code, me);
   initRename(code, me);
 
-  watchRoom(code, (data) => onRoomUpdate(data, me));
-  watchMessages(code, (list) => renderMessages(list, me));
+  // Ask right after joining — per design decision, on by default rather
+  // than gated behind a bell-icon click.
+  ensureNotificationPermission();
+
+  watchRoom(code, (data) => onRoomUpdate(data, code, me));
+  watchMessages(code, (list) => renderMessages(list, code, me));
 
   let expiresAt = room.expiresAt;
   watchExpiry(code, (val) => {
