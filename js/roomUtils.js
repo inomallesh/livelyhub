@@ -208,4 +208,3 @@ export function getSavedIdentity() {
     color: localStorage.getItem("lh_color") || COLOR_PALETTE[0],
   };
 }
-
