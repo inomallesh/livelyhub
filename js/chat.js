@@ -1,4 +1,5 @@
 import { sendMessage } from "./roomUtils.js";
+import { encryptText, decryptText } from "./crypto.js";
 
 const els = {
   scroll: document.getElementById("chatScroll"),
@@ -26,7 +27,8 @@ export function initChat(code, me) {
     const text = els.input.value.trim();
     if (!text) return;
     els.input.value = "";
-    await sendMessage(code, me.userId, me.name, me.color, text);
+    const ciphertext = await encryptText(code, text);
+    await sendMessage(code, me.userId, me.name, me.color, ciphertext);
   };
 
   els.sendBtn.addEventListener("click", handleSend);
@@ -38,20 +40,35 @@ export function initChat(code, me) {
   });
 }
 
-export function renderMessages(messages, me) {
+export async function renderMessages(messages, code, me) {
   const wasAtBottom =
     els.scroll.scrollHeight - els.scroll.scrollTop - els.scroll.clientHeight < 40;
 
-  els.scroll.innerHTML = messages
+  // Decrypt every message in parallel before rendering. A single bad/corrupt
+  // message shows its own "couldn't decrypt" placeholder rather than
+  // breaking the whole chat.
+  const decrypted = await Promise.all(
+    messages.map(async (msg) => {
+      try {
+        const text = await decryptText(code, msg.text);
+        return { ...msg, text, decryptOk: true };
+      } catch {
+        return { ...msg, text: "Couldn't decrypt this message", decryptOk: false };
+      }
+    })
+  );
+
+  els.scroll.innerHTML = decrypted
     .map((msg) => {
       const mine = msg.userId === me.userId;
       const bg = msg.color || "#888";
       const fg = textColorFor(bg);
+      const bodyClass = msg.decryptOk ? "" : ' style="opacity:0.6; font-style:italic;"';
       return `
         <div class="msg-row ${mine ? "mine" : "theirs"}">
           <div class="bubble" style="background:${bg}; color:${fg};">
             ${!mine ? `<div class="bubble-name">${escapeHtml(msg.name)}</div>` : ""}
-            <div>${escapeHtml(msg.text)}</div>
+            <div${bodyClass}>${escapeHtml(msg.text)}</div>
           </div>
         </div>`;
     })
