@@ -4,6 +4,9 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>livelyhub — room</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Rye&family=Kalam:wght@400;700&family=IM+Fell+English:ital@0;1&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="css/styles.css" />
 </head>
 <body>
@@ -47,6 +50,9 @@
       <section id="editorPanel" class="editor-panel glass state-green">
         <div id="editorInner" class="editor-inner claimable">
           <span id="claimHint" class="claim-hint">Open — click to claim</span>
+          <div id="decryptError" class="decrypt-error" style="display:none;">
+            <span>🔒 Couldn't decrypt this room.</span>
+          </div>
           <textarea id="lhTextarea" class="lh-textarea" readonly placeholder="Click here to start writing..."></textarea>
         </div>
         <div class="status-row">
