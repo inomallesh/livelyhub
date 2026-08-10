@@ -9,10 +9,14 @@ import {
   getUserId,
   getSavedIdentity,
   saveIdentity,
+  avatarPath,
 } from "./roomUtils.js";
 import { initEditor, onRoomUpdate } from "./editor.js";
 import { initChat, renderMessages } from "./chat.js";
 import { ensureNotificationPermission } from "./notifications.js";
+import { initEmbers } from "./embers.js";
+
+initEmbers();
 
 const params = new URLSearchParams(window.location.search);
 const code = params.get("code");
@@ -22,6 +26,7 @@ const loadingView = document.getElementById("loadingView");
 const roomView = document.getElementById("roomView");
 
 const roomCodeLabel = document.getElementById("roomCodeLabel");
+const youAvatar = document.getElementById("youAvatar");
 const youDot = document.getElementById("youDot");
 const youName = document.getElementById("youName");
 const youNameInput = document.getElementById("youNameInput");
@@ -90,14 +95,20 @@ async function main() {
   const userId = getUserId();
   const saved = getSavedIdentity();
   const chosenName = saved.name || `Guest-${userId.slice(2, 6)}`;
-  const presence = await joinRoom(code, userId, chosenName, saved.color);
-  const me = { userId, name: presence.name, color: presence.color };
+  const presence = await joinRoom(code, userId, chosenName, saved.color, saved.avatar);
+  const me = {
+    userId,
+    name: presence.name,
+    color: presence.color,
+    avatar: presence.avatar,
+  };
 
   // Reveal room UI
   loadingView.style.display = "none";
   roomView.style.display = "block";
   roomCodeLabel.textContent = `Room ${code}`;
   youName.textContent = `You: ${me.name}`;
+  youAvatar.src = avatarPath(me.avatar);
   youDot.style.background = me.color;
   youDot.style.color = me.color;
 
