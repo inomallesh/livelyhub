@@ -8,8 +8,15 @@ static files.
 
 1. Create a Firebase project at https://console.firebase.google.com
 2. Enable **Realtime Database** (not Firestore).
-3. Open `js/firebase-config.js` and replace the placeholder values with your
-   own project's config (Project Settings > General > Your apps > SDK setup).
+3. **Local dev**: copy `.env.example` to `.env.local` and fill in your real
+   Firebase config values (Project Settings > General > Your apps > SDK
+   setup), then run:
+   ```bash
+   node --env-file=.env.local build-config.js   # Node 20.6+
+   # older Node: export the same vars in your shell, then `npm run build`
+   ```
+   This writes `js/firebase-config.js` for you — it's gitignored, so it
+   never gets committed with real credentials in it.
 4. **Add your avatar art.** Create `assets/avatars/` in the project root and
    place your 21 images there, named `avatar-01.jpg` through `avatar-21.jpg`
    (sequential, zero-padded to 2 digits). The code expects exactly this path
@@ -26,9 +33,21 @@ static files.
    npx serve .
    ```
    Then open `http://localhost:5500`.
-6. To deploy: this is just static files — drag the folder (including
-   `assets/`) into Vercel, Netlify, or Firebase Hosting directly. Name the
-   Vercel project `livelyhub` to land on `livelyhub.vercel.app`.
+6. **Deploy to Vercel with real credentials injected at build time:**
+   - Push this project to a git repo (or use `vercel` CLI directly) and
+     import it in Vercel.
+   - In the Vercel project's **Framework Preset**, choose "Other".
+   - Set **Build Command** to `npm run build` (or `node build-config.js`).
+   - Set **Output Directory** to `.` (the project root — there's no
+     separate build output folder, `build-config.js` just writes
+     `js/firebase-config.js` in place before Vercel serves the static
+     files).
+   - In **Project Settings > Environment Variables**, add the 7 variables
+     from `.env.example` with your real Firebase values.
+   - Name the project `livelyhub` to land on `livelyhub.vercel.app`.
+   - Every deploy now runs the build script fresh, so `js/firebase-config.js`
+     is generated from Vercel's environment variables and never needs to
+     exist in your repo with real values in it.
 
 ## Firebase Realtime Database rules (starting point)
 
@@ -53,16 +72,32 @@ index.html             Landing page — name/avatar picker, create/join a room
 room.html                The room itself — editor + chat
 assets/avatars/            Your 21 avatar JPGs go here (avatar-01.jpg ... avatar-21.jpg)
 css/styles.css                Black+amber theme, avatar grid/bubble styling, animations
-js/firebase-config.js            Your Firebase project config (edit this)
-js/roomUtils.js                    Firebase read/write logic, avatar path helper
-js/crypto.js                         Content encryption
-js/notifications.js                    "Someone's editing" alerts
-js/embers.js                             Canvas ember particle background
-js/home.js                                 index.html: create/join + identity picker
-js/editor.js                                 Lock claiming, states, encryption, notifications
-js/chat.js                                     Message rendering/sending, avatar bubbles
-js/room.js                                       Orchestrates room.html
+build-config.js                  Generates js/firebase-config.js from env vars at build time
+.env.example                       Template listing the required env var names (no real values)
+js/firebase-config.js                Auto-generated, gitignored — don't edit or commit directly
+js/roomUtils.js                        Firebase read/write logic, avatar path helper
+js/crypto.js                             Content encryption
+js/notifications.js                        "Someone's editing" alerts
+js/embers.js                                 Canvas ember particle background
+js/home.js                                     index.html: create/join + identity picker
+js/editor.js                                     Lock claiming, states, encryption, notifications
+js/chat.js                                         Message rendering/sending, avatar bubbles
+js/room.js                                           Orchestrates room.html
 ```
+
+## On "securing" the Firebase config
+
+Worth knowing: the values in `firebase-config.js` (`apiKey`, `authDomain`,
+etc.) are not actually secret — every Firebase web app ships this config in
+its client-side JavaScript, visible to anyone who opens DevTools, regardless
+of how it's stored server-side. The real access-control boundary is your
+**Realtime Database rules** (above), not whether this file is hidden.
+
+What the env-var/build-script setup above *does* give you: the values stay
+out of your git history (so they're not sitting in a public repo), and it's
+easy to point different environments (dev/prod) at different Firebase
+projects. That's a real, legitimate reason to do this — just don't mistake
+it for making the Firebase project itself harder to reach.
 
 ## Theme: black + amber
 
