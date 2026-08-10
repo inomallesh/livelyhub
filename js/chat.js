@@ -1,20 +1,12 @@
 import { sendMessage } from "./roomUtils.js";
 import { encryptText, decryptText } from "./crypto.js";
+import { avatarPath } from "./roomUtils.js";
 
 const els = {
   scroll: document.getElementById("chatScroll"),
   input: document.getElementById("chatInput"),
   sendBtn: document.getElementById("sendBtn"),
 };
-
-function textColorFor(bgHex) {
-  const hex = bgHex.replace("#", "");
-  const r = parseInt(hex.substring(0, 2), 16);
-  const g = parseInt(hex.substring(2, 4), 16);
-  const b = parseInt(hex.substring(4, 6), 16);
-  const brightness = (r * 299 + g * 587 + b * 114) / 1000;
-  return brightness > 150 ? "#141414" : "#fff";
-}
 
 function escapeHtml(str) {
   const div = document.createElement("div");
@@ -28,7 +20,7 @@ export function initChat(code, me) {
     if (!text) return;
     els.input.value = "";
     const ciphertext = await encryptText(code, text);
-    await sendMessage(code, me.userId, me.name, me.color, ciphertext);
+    await sendMessage(code, me.userId, me.name, me.color, me.avatar, ciphertext);
   };
 
   els.sendBtn.addEventListener("click", handleSend);
@@ -61,15 +53,16 @@ export async function renderMessages(messages, code, me) {
   els.scroll.innerHTML = decrypted
     .map((msg) => {
       const mine = msg.userId === me.userId;
-      const bg = msg.color || "#888";
-      const fg = textColorFor(bg);
       const bodyClass = msg.decryptOk ? "" : ' style="opacity:0.6; font-style:italic;"';
+      const avatarImg = `<img class="bubble-avatar" src="${avatarPath(msg.avatar || 1)}" alt="" />`;
       return `
         <div class="msg-row ${mine ? "mine" : "theirs"}">
-          <div class="bubble" style="background:${bg}; color:${fg};">
+          ${!mine ? avatarImg : ""}
+          <div class="bubble">
             ${!mine ? `<div class="bubble-name">${escapeHtml(msg.name)}</div>` : ""}
             <div${bodyClass}>${escapeHtml(msg.text)}</div>
           </div>
+          ${mine ? avatarImg : ""}
         </div>`;
     })
     .join("");
