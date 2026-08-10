@@ -179,7 +179,7 @@ function setState(state, me) {
 async function handleClaimClick(code, me) {
   const isClaimable = els.inner.classList.contains("claimable");
   if (!isClaimable) return;
-  const won = await claimLock(code, me.userId, me.name, me.color);
+  const won = await claimLock(code, me.userId, me.name, me.color, me.avatar);
   if (won) {
     els.textarea.focus();
   }
