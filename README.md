@@ -2,8 +2,7 @@
 
 No React, no Next.js, no build step, no npm install. Firebase is loaded
 directly as a browser ES module from Google's CDN, so this runs as flat
-static files. One external dependency: two Google Fonts for the western
-journal look (see Theme section below).
+static files.
 
 ## Setup
 
@@ -11,7 +10,14 @@ journal look (see Theme section below).
 2. Enable **Realtime Database** (not Firestore).
 3. Open `js/firebase-config.js` and replace the placeholder values with your
    own project's config (Project Settings > General > Your apps > SDK setup).
-4. **Serve the folder over http(s) — don't just double-click `index.html`.**
+4. **Add your avatar art.** Create `assets/avatars/` in the project root and
+   place your 21 images there, named `avatar-01.jpg` through `avatar-21.jpg`
+   (sequential, zero-padded to 2 digits). The code expects exactly this path
+   and naming — see `avatarPath()` in `js/roomUtils.js` if you need to change
+   it. **License check**: if these came from a stock/portrait-art source,
+   confirm the license actually covers using them as in-app user avatars
+   (portrait/likeness rights are separate from the art style's copyright).
+5. **Serve the folder over http(s) — don't just double-click `index.html`.**
    Browsers block ES module imports (`type="module"`) on the `file://`
    protocol. Any of these work:
    ```bash
@@ -20,9 +26,9 @@ journal look (see Theme section below).
    npx serve .
    ```
    Then open `http://localhost:5500`.
-5. To deploy: this is just static files — drag the folder into Vercel,
-   Netlify, or Firebase Hosting directly. Name the Vercel project `livelyhub`
-   to land on `livelyhub.vercel.app`.
+6. To deploy: this is just static files — drag the folder (including
+   `assets/`) into Vercel, Netlify, or Firebase Hosting directly. Name the
+   Vercel project `livelyhub` to land on `livelyhub.vercel.app`.
 
 ## Firebase Realtime Database rules (starting point)
 
@@ -43,66 +49,70 @@ journal look (see Theme section below).
 ## File map
 
 ```
-index.html             Landing page — name/color picker, create/join a room
-room.html               The room itself — editor + chat
-css/styles.css           All styling: western journal theme, animations
-js/firebase-config.js     Your Firebase project config (edit this)
-js/roomUtils.js            Firebase read/write logic, shared by both pages
-js/crypto.js                 Content encryption (see below)
-js/notifications.js           "Someone's editing" alerts (see below)
-js/home.js                     Wires up index.html's create/join + identity picker
-js/editor.js                    Lock claiming, states, encryption, notifications
-js/chat.js                       Message rendering/sending, per-message encryption
-js/room.js                        Orchestrates room.html — join, expiry, rename
+index.html             Landing page — name/avatar picker, create/join a room
+room.html                The room itself — editor + chat
+assets/avatars/            Your 21 avatar JPGs go here (avatar-01.jpg ... avatar-21.jpg)
+css/styles.css                Black+amber theme, avatar grid/bubble styling, animations
+js/firebase-config.js            Your Firebase project config (edit this)
+js/roomUtils.js                    Firebase read/write logic, avatar path helper
+js/crypto.js                         Content encryption
+js/notifications.js                    "Someone's editing" alerts
+js/embers.js                             Canvas ember particle background
+js/home.js                                 index.html: create/join + identity picker
+js/editor.js                                 Lock claiming, states, encryption, notifications
+js/chat.js                                     Message rendering/sending, avatar bubbles
+js/room.js                                       Orchestrates room.html
 ```
+
+## Theme: black + amber
+
+Full reskin to a black background with amber/orange accents, to seamlessly
+host your black-background avatar art. The trick making that work: avatar
+`<img>` elements use `mix-blend-mode: screen`, which makes black pixels
+contribute nothing to the final render — so the black square edges of each
+JPG visually disappear into the black page background, leaving only the
+amber linework visible, no hard image-box edges. This only works because
+both the images and the page are black; if you ever swap in avatars with a
+different background color, drop the `mix-blend-mode: screen` rule in
+`css/styles.css` (search for it — three spots: `.avatar-cell img`,
+`.you-avatar`, `.bubble-avatar`).
+
+Fonts: `Rye` for display headers, `Kalam` for handwritten editor/chat text,
+`IM Fell English` for general UI text — loaded via Google Fonts `<link>`
+tags in both HTML files.
+
+## Avatars
+
+- Picked on the home page in a scrollable grid (`js/home.js`), persisted to
+  `localStorage` alongside the name, carried into the room.
+- Shown next to your name in the room header, and next to each chat message
+  (your own on the right, others' on the left — see `js/chat.js`).
+- Per-user color still exists under the hood (auto-assigned at join, no
+  manual picker) — it's now just the accent for the lock/cursor status dot,
+  not the primary identity marker.
+
+## Ember particles
+
+`js/embers.js` draws a lightweight canvas particle system — small, sparse
+amber/orange dots drifting upward with a gentle flicker, across the whole
+page. No library, plain `requestAnimationFrame`. Respects
+`prefers-reduced-motion` (skips the animation entirely if set). Tune count/
+speed/color via the constants at the top of that file.
 
 ## Content encryption
 
-Document content and chat message text are encrypted in the browser (AES-GCM
-via the Web Crypto API) before being written to Firebase, and decrypted after
-being read back. Room metadata (code, expiry, presence, who holds the lock)
-stays in plain text, since the UI needs to read it instantly.
-
-**Important limitation, by design**: the encryption key is derived from the
-room's 6-digit code itself (via PBKDF2) — there's no separate passphrase.
-This means anyone with the room code can decrypt it, same as they could just
-open the room normally. What it *does* protect against is casual exposure —
-e.g. someone browsing raw Firebase data without trying room codes one by
-one. It is **not** meaningful protection against a motivated attacker (a
-6-digit code is only ~900,000 possibilities, trivial to brute-force). This
-only applies to rooms created after this change — there's no migration for
-older data.
-
-If a message or the document can't be decrypted (corrupted data, or content
-from before encryption was added), the UI shows a "couldn't decrypt" notice
-rather than displaying garbled ciphertext — a small banner replacing the
-editor, or an italic placeholder per chat message.
+Document content and chat message text are encrypted client-side (AES-GCM)
+before being written to Firebase; room metadata (code, expiry, presence,
+lock) stays plain text. The key is derived from the room's 6-digit code
+(PBKDF2) — meaningful against casual exposure, not against a motivated
+attacker (a 6-digit code is brute-forceable). No migration for older rooms.
+A failed decrypt shows a notice instead of garbled text.
 
 ## "Someone's editing" notifications
 
-When someone else claims the writing lock while your tab is hidden or your
-browser window isn't focused, you get:
-- An OS-level notification (if you've granted permission — requested
-  automatically right after you join a room)
-- A tab title change (e.g. "✏️ deep is writing — livelyhub") as a fallback
-  that works even without notification permission
-
-Clicking a notification just dismisses it — it doesn't steal focus back to
-the tab. Notifications are deliberately throttled to fire once per claim,
-not on every keystroke.
-
-## Theme
-
-Reskinned from the earlier frosted-glass look to an original western/aged-
-paper aesthetic — parchment panels, ink-toned accents, worn leather buttons
-— inspired by that general genre, not reproducing any specific game's actual
-assets. Two Google Fonts are loaded for this (`Rye` for headers, `Kalam` for
-handwritten body/editor/chat text, `IM Fell English` for general UI text).
-The paper grain texture is generated procedurally via an SVG `feTurbulence`
-filter baked into a CSS data-URI — no external texture image needed.
-
-The editor and chat panels are now a fixed equal height (620px on desktop,
-480px on narrow/mobile layouts) so they line up visually.
+OS notification (permission requested right after joining) plus a tab-title
+fallback, firing once per claim when someone else takes the pen while your
+tab is hidden/unfocused. Clicking a notification just dismisses it.
 
 ## Not yet built (still worth discussing)
 
