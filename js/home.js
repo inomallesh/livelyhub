@@ -1,10 +1,14 @@
 import {
   createRoom,
   getRoom,
-  COLOR_PALETTE,
+  AVATAR_COUNT,
+  avatarPath,
   saveIdentity,
   getSavedIdentity,
 } from "./roomUtils.js";
+import { initEmbers } from "./embers.js";
+
+initEmbers();
 
 const createBtn = document.getElementById("createBtn");
 const createBtnLabel = document.getElementById("createBtnLabel");
@@ -12,28 +16,36 @@ const joinBtn = document.getElementById("joinBtn");
 const joinInput = document.getElementById("joinInput");
 const errorMsg = document.getElementById("errorMsg");
 const nameInput = document.getElementById("nameInput");
-const colorSwatches = document.getElementById("colorSwatches");
+const avatarGrid = document.getElementById("avatarGrid");
 
-// ---- Identity: name + color, picked before create/join, persisted for next time ----
+// ---- Identity: name + avatar, picked before create/join, persisted for next time ----
+// (color is still auto-assigned under the hood for the lock/cursor accent,
+// but the picker itself only shows name + avatar now.)
 
 const saved = getSavedIdentity();
 nameInput.value = saved.name;
-let selectedColor = saved.color;
+let selectedAvatar = saved.avatar;
 
-function renderSwatches() {
-  colorSwatches.innerHTML = COLOR_PALETTE.map(
-    (c) =>
-      `<div class="swatch${c === selectedColor ? " selected" : ""}" data-color="${c}" style="background:${c}; color:${c};"></div>`
-  ).join("");
+function renderAvatarGrid() {
+  const cells = [];
+  for (let i = 1; i <= AVATAR_COUNT; i++) {
+    const selected = i === selectedAvatar ? " selected" : "";
+    cells.push(
+      `<div class="avatar-cell${selected}" data-avatar="${i}">
+         <img src="${avatarPath(i)}" alt="Avatar ${i}" loading="lazy" />
+       </div>`
+    );
+  }
+  avatarGrid.innerHTML = cells.join("");
 }
-renderSwatches();
+renderAvatarGrid();
 
-colorSwatches.addEventListener("click", (e) => {
-  const swatch = e.target.closest(".swatch");
-  if (!swatch) return;
-  selectedColor = swatch.dataset.color;
-  saveIdentity({ color: selectedColor });
-  renderSwatches();
+avatarGrid.addEventListener("click", (e) => {
+  const cell = e.target.closest(".avatar-cell");
+  if (!cell) return;
+  selectedAvatar = Number(cell.dataset.avatar);
+  saveIdentity({ avatar: selectedAvatar });
+  renderAvatarGrid();
 });
 
 nameInput.addEventListener("input", () => {
