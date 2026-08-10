@@ -10,11 +10,7 @@
   <link rel="stylesheet" href="css/styles.css" />
 </head>
 <body>
-  <div class="bg-orbs">
-    <div class="orb orb--1"></div>
-    <div class="orb orb--2"></div>
-    <div class="orb orb--3"></div>
-  </div>
+  <div class="bg-orbs"></div>
 
   <div id="notFoundView" class="center-msg" style="display:none;">
     <h2>Room not found</h2>
@@ -32,6 +28,7 @@
       <div class="room-title">
         <h2 id="roomCodeLabel">Room</h2>
         <span id="youBadge" class="you-badge">
+          <img id="youAvatar" class="you-avatar" alt="" />
           <span class="you-dot" id="youDot"></span>
           <span id="youName" class="you-name" title="Click to rename">You</span>
           <input id="youNameInput" class="you-name-input" maxlength="24" style="display:none;" />
