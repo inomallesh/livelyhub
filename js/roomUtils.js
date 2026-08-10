@@ -32,7 +32,7 @@ export const COLOR_PALETTE = [
 export const AVATAR_COUNT = 21;
 export function avatarPath(id) {
   const n = String(id).padStart(2, "0");
-  return `https://github.com/inomallesh/livelyhub/blob/main/assets/avatars/avatar-${n}.png`; 
+  return `https://raw.githubusercontent.com/inomallesh/livelyhub/refs/heads/main/assets/avatars/avatar-${n}.png`; 
 }
 
 const SESSION_LENGTH_MS = 6 * 60 * 60 * 1000; // 6 hours
