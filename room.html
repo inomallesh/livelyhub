@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>livelyhub — room</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/styles.css" />
+  <script>
+    (function () {
+      var theme = localStorage.getItem("lh_theme") || "dark";
+      document.documentElement.setAttribute("data-theme", theme);
+    })();
+  </script>
+</head>
+<body>
+  <div id="notFoundView" class="center-msg" style="display:none;">
+    <h2>Room not found</h2>
+    <p>This room doesn't exist, or its 6 hours are already up.</p>
+    <a href="index.html" class="btn btn-secondary" style="margin-top:12px; text-decoration:none; display:inline-block;">Back home</a>
+  </div>
+
+  <div id="loadingView" class="center-msg">
+    <span class="spinner"></span>
+    <p>Joining room...</p>
+  </div>
+
+  <div id="roomView" class="room-shell" style="display:none;">
+    <header class="top-bar">
+      <div class="top-left">
+        <h2 id="roomCodeLabel">Room</h2>
+        <span id="youBadge" class="you-badge">
+          <span class="you-dot" id="youDot"></span>
+          <span id="youName" class="you-name" title="Click to rename">You</span>
+          <input id="youNameInput" class="you-name-input" maxlength="24" style="display:none;" />
+          <svg class="rename-icon" id="renameIcon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M16.5 3.5l4 4L7 21l-4.5.5.5-4.5L16.5 3.5z" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </span>
+      </div>
+      <div class="top-right">
+        <span id="expiryLabel" class="expiry-label">...</span>
+        <button id="extendBtn" class="btn extend-btn">+2h</button>
+        <button id="themeToggle" class="icon-btn" aria-label="Toggle theme" title="Toggle light/dark theme"></button>
+        <button id="membersToggleBtn" class="icon-btn" aria-label="Toggle members" title="Members">
+          <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M16 14c2.5 0 4.5 1.5 5 4M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM3 19c.6-3 3-5 6-5s5.4 2 6 5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+            <circle cx="15.5" cy="6.5" r="2.5" stroke="currentColor" stroke-width="1.6"/>
+          </svg>
+        </button>
+        <button id="chatToggleBtn" class="icon-btn chat-toggle-btn" aria-label="Toggle messages" title="Messages">
+          <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M4 5h16v11H8l-4 4V5z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>
+          </svg>
+          <span id="unreadBadge" class="unread-badge" style="display:none;">0</span>
+        </button>
+        <button id="menuToggleBtn" class="icon-btn" aria-label="Menu" title="Menu">
+          <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M4 6h16M4 12h16M4 18h16" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+          </svg>
+        </button>
+      </div>
+    </header>
+
+    <div class="ide-body">
+      <aside class="sidebar">
+        <div class="sidebar-header">
+          <span>Files</span>
+          <div class="sidebar-actions">
+            <button id="newFileBtn" class="icon-btn" title="New file">＋📄</button>
+            <button id="newFolderBtn" class="icon-btn" title="New folder">＋📁</button>
+          </div>
+        </div>
+        <div id="fileTree" class="file-tree"></div>
+      </aside>
+
+      <div class="editor-area">
+        <div class="editor-toolbar">
+          <span id="currentFileLabel" class="current-file-label">No file open</span>
+          <div class="editor-toolbar-actions">
+            <button id="runBtn" class="btn toolbar-btn" disabled>▶ Run</button>
+            <button id="downloadFileBtn" class="icon-btn" title="Download this file">⬇</button>
+            <button id="downloadZipBtn" class="icon-btn" title="Download whole project as .zip">⬇ zip</button>
+          </div>
+        </div>
+
+        <div id="editorEmptyState" class="editor-empty-state">
+          <p>Select a file from the sidebar, or create a new one.</p>
+        </div>
+
+        <main id="editorPanel" class="editor-panel state-green" style="display:none;">
+          <div class="editor-inner">
+            <span id="claimHint" class="claim-hint">Open — click to claim</span>
+            <div id="decryptError" class="decrypt-error" style="display:none;">
+              <span>Couldn't decrypt this file.</span>
+            </div>
+            <div id="monacoContainer" class="monaco-container"></div>
+          </div>
+          <div class="status-row">
+            <span id="statusLabel" class="status-label">
+              <span class="status-dot" id="statusDot"></span>
+              <span id="statusText">Open — click to claim</span>
+            </span>
+            <button id="doneBtn" class="btn done-btn">Done writing</button>
+          </div>
+        </main>
+      </div>
+    </div>
+
+    <div id="toastHost" class="toast-host"></div>
+
+    <div id="outputPopup" class="chat-popup output-popup" hidden>
+      <div class="chat-popup-header">
+        <span id="outputTitle">Output</span>
+        <button id="outputCloseBtn" class="icon-btn" aria-label="Close output">✕</button>
+      </div>
+      <div id="outputBody" class="output-body"></div>
+    </div>
+
+    <div id="chatPopup" class="chat-popup" hidden>
+      <div class="chat-popup-header">
+        <span>Messages</span>
+        <button id="chatCloseBtn" class="icon-btn" aria-label="Close messages">✕</button>
+      </div>
+      <div id="chatScroll" class="chat-scroll"></div>
+      <div class="chat-input-row">
+        <input id="chatInput" class="chat-input" placeholder="Message the room..." />
+        <button id="sendBtn" class="send-btn">
+          <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M4 12L20 4L13 20L11 13L4 12Z" fill="currentColor"/>
+          </svg>
+        </button>
+      </div>
+    </div>
+
+    <div id="membersPopup" class="chat-popup members-popup" hidden>
+      <div class="chat-popup-header">
+        <span>Members · <span id="membersOnlineCount">0</span> online</span>
+        <button id="membersCloseBtn" class="icon-btn" aria-label="Close members">✕</button>
+      </div>
+      <div id="membersList" class="members-list"></div>
+    </div>
+
+    <div id="menuPopup" class="menu-popup" hidden></div>
+  </div>
+
+  <script type="module" src="js/room.js"></script>
+</body>
+</html>
