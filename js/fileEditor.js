@@ -114,6 +114,26 @@ function createPane(paneId, isDark) {
       if (!fileId) return;
       const session = sessions.get(fileId);
       if (session && isClaimable(session)) {
+        // Claim optimistically: flip editable + treat it as ours locally
+        // right away, instead of waiting on the Firebase round-trip. Without
+        // this, a fast click-then-type could land while readOnly was still
+        // true (Monaco blocks it with its own tooltip) and, separately, our
+        // own content-push guard was checking the stale pre-claim lock and
+        // silently dropping the keystroke even after readOnly flipped. The
+        // real Firebase confirmation still happens in the background and
+        // self-corrects moments later via handleFileUpdate if the claim
+        // actually lost a race to someone else.
+        session.lock = { userId: me.userId, name: me.name, color: me.color, lastActiveAt: Date.now() };
+        for (const pid of ["left", "right"]) {
+          const p = panes[pid];
+          if (p && p.fileId === fileId) {
+            p.editorInstance.updateOptions({ readOnly: false });
+            updatePaneChrome(p, session);
+          }
+        }
+        if (getActiveFileId() === fileId) renderSharedStatus();
+        scheduleLockTimers(fileId, session);
+
         claimFileLock(code, fileId, me.userId, me.color);
       }
     },
