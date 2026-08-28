@@ -1,7 +1,0 @@
-{
-  "name": "livelyhub",
-  "private": true,
-  "scripts": {
-    "build": "node build-config.js"
-  }
-}
